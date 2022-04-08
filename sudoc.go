@@ -5,6 +5,7 @@ import "net/http"
 // Sudoc is the only access point to all ABES APIs.
 type Sudoc struct {
 	client *http.Client
+	Bibs   BibService
 }
 
 // New returns an initialized Sudoc struct.
@@ -14,5 +15,6 @@ func New(client *http.Client) *Sudoc {
 	}
 	sudoc := new(Sudoc)
 	sudoc.client = client
+	sudoc.Bibs = BibService{client: sudoc}
 	return sudoc
 }
