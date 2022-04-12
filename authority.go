@@ -1,7 +1,7 @@
 package sudoc
 
 // Entity represents an authority.
-type Entity struct {
+type Authority struct {
 	Type string
 	Id   string
 }

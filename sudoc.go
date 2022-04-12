@@ -1,6 +1,9 @@
 package sudoc
 
-import "net/http"
+import (
+	"net/http"
+	"time"
+)
 
 // Sudoc is the only access point to all ABES APIs.
 type Sudoc struct {
@@ -9,12 +12,11 @@ type Sudoc struct {
 }
 
 // New returns an initialized Sudoc struct.
-func New(client *http.Client) *Sudoc {
-	if client == nil {
-		client = http.DefaultClient
-	}
+func New() *Sudoc {
 	sudoc := new(Sudoc)
-	sudoc.client = client
+	sudoc.client = &http.Client{
+		Timeout: time.Second * 10,
+	}
 	sudoc.Bibs = BibService{client: sudoc}
 	return sudoc
 }

@@ -1,7 +1,6 @@
 package sudoc
 
 import (
-	"net/http"
 	"reflect"
 	"testing"
 )
@@ -14,18 +13,10 @@ func assertNotNil(object interface{}, t *testing.T, label string) {
 }
 
 func TestSudoc(t *testing.T) {
-	var tests = []struct {
-		sudoc *Sudoc
-		label string
-	}{
-		{New(nil), "New(nil)"},
-		{New(http.DefaultClient), "New(http.DefaultClient)"},
-	}
-	for _, test := range tests {
-		assertNotNil(test.sudoc, t, test.label)
-		if test.sudoc != nil {
-			assertNotNil(test.sudoc.client, t, test.label+".client")
-			assertNotNil(test.sudoc.Bibs, t, test.label+".Bibs")
-		}
+	sudoc := New()
+	assertNotNil(sudoc, t, "New()")
+	if sudoc != nil {
+		assertNotNil(sudoc.client, t, ".client")
+		assertNotNil(sudoc.Bibs, t, ".Bibs")
 	}
 }
