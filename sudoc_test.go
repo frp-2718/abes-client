@@ -1,6 +1,7 @@
 package sudoc
 
 import (
+	"errors"
 	"net/http"
 	"reflect"
 	"testing"
@@ -20,6 +21,17 @@ func TestSudoc(t *testing.T) {
 	if sudoc != nil {
 		assertNotNil(sudoc.client, t, ".client")
 		assertNotNil(sudoc.Bibs, t, ".Bibs")
+	}
+	if sudoc.maxAttempts != defaultMaxAttempts {
+		t.Errorf("maxAttempts = %d, expected %d", sudoc.maxAttempts, defaultMaxAttempts)
+	}
+	sudoc.SetMaxAttempts(0)
+	if sudoc.maxAttempts != defaultMaxAttempts {
+		t.Errorf("maxAttempts = %d, expected %d", sudoc.maxAttempts, defaultMaxAttempts)
+	}
+	sudoc.SetMaxAttempts(5)
+	if sudoc.maxAttempts != 5 {
+		t.Errorf("maxAttempts = %d, expected 5", sudoc.maxAttempts)
 	}
 	myClient := &http.Client{
 		Timeout: time.Second * 5,
@@ -54,4 +66,71 @@ func TestIsValidPPN(t *testing.T) {
 			t.Errorf("%s returned %v ; want %v", test.ppn, got, test.want)
 		}
 	}
+}
+
+func TestBuildRequest(t *testing.T) {
+	var expected []request
+	expected = append(expected, request{http.NewRequest("GET", sudocBaseURL+"service/biblio/123456", nil), 0})
+	expected[0].Header.Set("Accept", "text/xml")
+	expected = append(expected, request{http.NewRequest("GET", sudocBaseURL+"service/biblio/123456", nil), 0})
+	expected[1].Header.Set("Accept", "text/json")
+	expected = append(expected, request{http.NewRequest("GET", sudocBaseURL+"service/biblio/123456", nil), 0})
+	expected[1].Header.Set("Accept", "text/json")
+	var tests = []struct {
+		serv service
+		ppns []string
+		fmt  responseFormat
+		want request
+		err  error
+	}{
+		{biblio, []string{"123456"}, xml, expected[0], nil},
+		{null, []string{"123456"}, xml, nil, errors.New("no service 'null'")},
+		{biblio, []string{"123456"}, json, expected[1], nil},
+		{null, []string{"123456"}, json, nil, errors.New("no service 'null'")},
+		{biblio, []string{"123456"}, null, nil, errors.New("unknown 'null' format")},
+		{null, []string{"123456"}, null, nil, erros.New("no service 'null'")},
+		{biblio, []string{"123456", "234567"}, xml, nil, errors.New("service 'biblio' does not accept multiple ppns")},
+		{null, []string{"123456", "234567"}, xml, nil, errors.New("no service 'null'")},
+		{biblio, []string{"123456", "234567"}, json, nil, errors.New("service 'biblio' does not accept multiple ppns")},
+		{null, []string{"123456", "234567"}, json, nil, errors.New("no service 'null'")},
+		{biblio, []string{"123456", "234567"}, null, nil, errors.New("unknown 'null' format")},
+		{null, []string{"123456", "234567"}, null, nil, errors.New("no service 'null'")},
+		{biblio, []string{"123456", ""}, xml, expected[0], nil},
+		{null, []string{"123456", ""}, xml, nil, errors.New("no service 'null'")},
+		{biblio, []string{"123456", ""}, json, expected[1], nil},
+		{null, []string{"123456", ""}, null, nil, errors.New("no service 'null'")},
+		{biblio, []string{"123456", ""}, null, nil, errors.New("unknown 'null' format")},
+		{biblio, []string{""}, xml, nil, errors.New("ppn(s) missing")},
+		{null, []string{""}, xml, nil, errors.New("no service 'null'")},
+		{biblio, []string{""}, json, nil, errors.New("ppn(s) missing")},
+		{null, []string{""}, json, nil, errors.New("no service 'null'")},
+		{biblio, []string{""}, null, nil, errors.New("unknown 'null' format")},
+		{null, []string{""}, null, nil, errors.New("no service 'null'")},
+		{biblio, []string{}, xml, nil, errors.New("ppn(s) missing")},
+		{null, []string{}, xml, nil, errors.New("no service 'null'")},
+		{biblio, []string{}, json, nil, errors.New("ppn(s) missing")},
+		{null, []string{}, json, nil, errors.New("no service 'null'")},
+		{biblio, []string{}, null, nil, errors.New("unknownn 'null' format")},
+		{null, []string{}, null, nil, errors.New("no service 'null'")},
+		{biblio, nil, xml, nil, errors.New("ppn(s) missing")},
+		{null, nil, xml, nil, errors.New("no service 'null'")},
+		{biblio, nil, json, nil, errors.New("ppn(s) missing")},
+		{null, nil, json, nil, errors.New("no service 'null'")},
+		{biblio, nil, null, nil, errors.New("unknown 'null' format")},
+		{null, nil, null, nil, errors.New("no service 'null'")},
+	}
+	for i, test := range tests {
+		got := sudoc.buildRequest(test.serv, test.ppns, test.fmt)
+		if !equalRequests(got, test.want) {
+			t.Errorf("test %d: %v, %v, %v got %v want %v", i, test.serv, test.ppns,
+				test.fmt, got, test.want)
+		}
+	}
+}
+
+func equalRequests(r1, r2 request) bool {
+	return r1.Method == r2.Method &&
+		r1.URL.String() == r2.URL.String() &&
+		r1.Header.Get("Accept") == r2.Header.Get("Accept") &&
+		r1.attempts == r2.attempts
 }
