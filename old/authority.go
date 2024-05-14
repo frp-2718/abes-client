@@ -1,4 +1,4 @@
-package sudoc
+package sudocclient
 
 // Entity represents an authority.
 type Authority struct {

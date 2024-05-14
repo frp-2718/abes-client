@@ -1,72 +1,60 @@
 package sudoc
 
 import (
+	"encoding/xml"
+	"fmt"
+	"io"
 	"net/http"
-	"regexp"
-	"time"
+	"strings"
 )
 
-const (
-	defaultMaxAttempts = 10
-	sudocBaseURL       = "https://www.sudoc.fr/"
-	idrefBaseURL       = "https://www.idref.fr/"
-)
+const BASE_URL = "https://www.sudoc.fr/services/multiwhere/"
 
-type service int
-
-const (
-	biblio service = iota
-)
-
-type responseFormat int
-
-const (
-	json responseFormat = iota
-	xml
-)
-
-// Sudoc is the only access point to all ABES APIs.
 type Sudoc struct {
-	client      *http.Client
-	Bibs        BibService
-	maxAttempts int
 }
 
-type request struct {
-	*http.Request
-	attempts int
+type Library struct {
+	XMLName   xml.Name `xml:"library"`
+	RCR       string   `xml:"rcr"`
+	Shortname string   `xml:"shortname"`
+	Latitude  string   `xml:"latitude"`
+	Longitude string   `xml:"longitude"`
 }
 
-// New returns an initialized Sudoc struct.
+type Result struct {
+	XMLName   xml.Name  `xml:"result"`
+	Libraries []Library `xml:"library"`
+}
+
+type Query struct {
+	XMLName xml.Name `xml:"query"`
+	PPN     string   `xml:"ppn"`
+	Result  Result   `xml:"result"`
+}
+
+type ServiceResult struct {
+	XMLName xml.Name `xml:"sudoc"`
+	Queries []Query  `xml:"query"`
+}
+
 func New() *Sudoc {
-	sudoc := new(Sudoc)
-	sudoc.client = &http.Client{
-		Timeout: time.Second * 10,
-	}
-	sudoc.Bibs = BibService{client: sudoc}
-	sudoc.maxAttempts = defaultMaxAttempts
-	return sudoc
+	return new(Sudoc)
 }
 
-// SetClient allows user to provide a custom HTTP client.
-func (s *Sudoc) SetHTTPClient(client *http.Client) {
-	if client != nil {
-		s.client = client
-	}
-}
+func (s *Sudoc) Locations(ppns []string) {
+	ppnString := strings.Join(ppns, ",")
+	res, _ := http.Get(BASE_URL + ppnString)
+	body, _ := io.ReadAll(res.Body)
+	res.Body.Close()
 
-// SetMaxAttempts adjusts the maximum number of attempts for an HTTP request
-// before aborting. If 0, maxAttempts is set to default.
-func (s *Sudoc) SetMaxAttempts(n int) {
-	if n != 0 {
-		s.maxAttempts = n
-	} else {
-		s.maxAttempts = defaultMaxAttempts
-	}
-}
+	var sr ServiceResult
+	xml.Unmarshal(body, &sr)
 
-// IsValidPPN checks if the given PPN is well formed.
-func IsValidPPN(ppn string) bool {
-	matched, _ := regexp.Match(`^[0-9]{8}?([0-9]{1}?|[xX])$`, []byte(ppn))
-	return matched
+	for _, query := range sr.Queries {
+		fmt.Println(query.PPN)
+		for _, library := range query.Result.Libraries {
+			fmt.Printf("%s : %s\n", library.RCR, library.Shortname)
+		}
+		fmt.Println("#######################")
+	}
 }
