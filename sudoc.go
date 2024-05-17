@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"time"
 )
 
-const BASE_URL = "https://www.sudoc.fr/services/multiwhere/"
+const (
+	BASE_URL            = "https://www.sudoc.fr/services/multiwhere/"
+	MAX_MULTIWHERE_PPNS = 10
+)
 
 type Sudoc struct {
 	client *http.Client
@@ -52,24 +54,22 @@ func NewSudoc(client *http.Client) *Sudoc {
 	return sudoc
 }
 
-func (s *Sudoc) do(url string) (*http.Response, error) {
-	return http.Get(url)
-}
-
+// Assume that ppns are valid and unique.
 func (s *Sudoc) Locations(ppns []string) map[string][]Library {
-	ppnString := strings.Join(ppns, ",")
-	res, _ := s.do(BASE_URL + ppnString)
-	body, _ := io.ReadAll(res.Body)
-	res.Body.Close()
-
-	var sr ServiceResult
-	xml.Unmarshal(body, &sr)
-
+	ppnStrings := s.concatPPNs(ppns, MAX_MULTIWHERE_PPNS)
 	result := make(map[string][]Library)
+	for _, p := range ppnStrings {
+		res, _ := s.do(s.buildURL(BASE_URL, p))
+		body, _ := io.ReadAll(res.Body)
+		res.Body.Close()
 
-	for _, query := range sr.Queries {
-		for _, library := range query.Result.Libraries {
-			result[query.PPN] = append(result[query.PPN], library)
+		var sr ServiceResult
+		xml.Unmarshal(body, &sr)
+
+		for _, query := range sr.Queries {
+			for _, library := range query.Result.Libraries {
+				result[query.PPN] = append(result[query.PPN], library)
+			}
 		}
 	}
 	return result

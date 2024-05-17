@@ -1,48 +1,31 @@
 package sudoc
 
 import (
-	"errors"
-	"io"
-	"log"
 	"net/http"
-	"strconv"
+	"strings"
 )
 
-const (
-	multiwhere_url = "https://www.sudoc.fr/services/multiwhere/"
-)
+func (s *Sudoc) do(url string) (*http.Response, error) {
+	return http.Get(url)
+}
 
-// type Fetcher interface {
-// 	Fetch(url string) ([]byte, error)
-// }
+func (s *Sudoc) buildURL(base, path string) string {
+	return base + path
+}
 
-// type HttpFetcher struct {
-// 	client *http.Client
-// }
-
-// func NewHttpFetcher(client *http.Client) Fetcher {
-// 	var fetcher HttpFetcher
-// 	if client == nil {
-// 		fetcher.client = &http.Client{Timeout: 5 * time.Second}
-// 	} else {
-// 		fetcher.client = client
-// 	}
-// 	return fetcher
-// }
-
-func (s *Sudoc) Fetch(url string) ([]byte, error) {
-	resp, err := s.client.Get(url)
-	if err != nil {
-		return []byte{}, nil
+func (s *Sudoc) concatPPNs(ppns []string, max_ppns int) []string {
+	if max_ppns < 1 {
+		max_ppns = 1
+	} else if max_ppns > MAX_MULTIWHERE_PPNS {
+		max_ppns = MAX_MULTIWHERE_PPNS
 	}
-	if resp.StatusCode != http.StatusOK {
-		return []byte{}, errors.New(strconv.Itoa(resp.StatusCode))
+	res := []string{}
+	for len(ppns) > max_ppns {
+		res = append(res, strings.Join(ppns[:max_ppns], ","))
+		ppns = ppns[max_ppns:]
 	}
-	data, err := io.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		log.Println(err)
-		return []byte{}, err
+	if len(ppns) > 0 {
+		res = append(res, strings.Join(ppns, ","))
 	}
-	return data, nil
+	return res
 }

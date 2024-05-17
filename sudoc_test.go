@@ -2,6 +2,7 @@ package sudoc
 
 import (
 	"net/http"
+	"slices"
 	"testing"
 )
 
@@ -20,15 +21,46 @@ func TestNewSudoc(t *testing.T) {
 	}
 }
 
-// func TestSudoc(T *testing.T) {
-// 	ppns := []string{"144089661", "154923206"}
-// 	sc := NewSudoc(nil)
-// 	res := sc.Locations(ppns)
-// 	for k, v := range res {
-// 		fmt.Println(k)
-// 		for _, l := range v {
-// 			fmt.Println(l)
-// 		}
-// 		fmt.Println()
+// func TestDo(t *testing.T) {
+// 	server := httptest.NewServer(http.HandlerFunc(
+// 		func(w http.ResponseWriter, r *http.Request) {
+// 			if r.URL.Path != "ppn" {
+// 				t.Errorf("Expected to request /ppn, got %s", r.URL.Path)
+// 			}
+// 			w.WriteHeader(http.StatusOK)
+// 			w.Write([]byte(`{"value":"fixed"}`))
+// 		}))
+// 	defer server.Close()
+
+// 	s := NewSudoc(nil)
+// 	value, _ := s.do(server.URL)
+// 	body, _ := io.ReadAll(value.Body)
+// 	value.Body.Close()
+// 	if string(body) != "fixed" {
+// 		t.Error("error")
 // 	}
 // }
+
+func TestConcatPPNs(t *testing.T) {
+	s := NewSudoc(nil)
+	max_ppns := 3
+
+	var tests = []struct {
+		in       []string
+		expected []string
+	}{
+		{[]string{}, []string{}},
+		{[]string{"a"}, []string{"a"}},
+		{[]string{"a", "b", "c"}, []string{"a,b,c"}},
+		{[]string{"a", "b", "c", "d"}, []string{"a,b,c", "d"}},
+		{[]string{"a", "b", "c", "d", "e", "f", "g", "h", "i"},
+			[]string{"a,b,c", "d,e,f", "g,h,i"}},
+	}
+
+	for _, test := range tests {
+		got := s.concatPPNs(test.in, max_ppns)
+		if slices.Compare(got, test.expected) != 0 {
+			t.Errorf("got %#v, want %#v", got, test.expected)
+		}
+	}
+}

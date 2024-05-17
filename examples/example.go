@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	ppns := []string{"144089661", "154923206"}
+	ppns := []string{"27681536X", "144089661", "154923206"}
 	sc := sudoc.NewSudoc(nil)
 	res := sc.Locations(ppns)
 	for k, v := range res {
