@@ -45,7 +45,7 @@ type ServiceResult struct {
 	Queries []Query  `xml:"query"`
 }
 
-func NewSudoc(client *http.Client) *Sudoc {
+func New(client *http.Client) *Sudoc {
 	sudoc := new(Sudoc)
 	if client == nil {
 		client = &http.Client{Timeout: 5 * time.Second}
