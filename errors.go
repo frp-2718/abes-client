@@ -15,6 +15,12 @@ type multiwhere_error struct {
 	ErrorText string `xml:"error"`
 }
 
+type InvalidRequestError struct{}
+
+func (e *InvalidRequestError) Error() string {
+	return fmt.Sprint("empty request")
+}
+
 type NotFoundError struct {
 	PPN string
 }
@@ -23,10 +29,12 @@ func (e *NotFoundError) Error() string {
 	return fmt.Sprintf("%s not found", e.PPN)
 }
 
-type InvalidRequestError struct{}
+type UnknownError struct {
+	PPN string
+}
 
-func (e *InvalidRequestError) Error() string {
-	return fmt.Sprint("Empty request")
+func (e *UnknownError) Error() string {
+	return fmt.Sprint("unknown error", e.PPN)
 }
 
 func decodeError(r *http.Response) error {
@@ -45,13 +53,17 @@ func decodeError(r *http.Response) error {
 	}
 
 	if strings.Contains(e.ErrorText, "null xml") {
-		re := regexp.MustCompile(`ppn=(?P<ppnValue>[^}]+)`)
-		ppn := re.FindString(e.ErrorText)
+		re := regexp.MustCompile(`ppn=([^}]+)`)
+		match := re.FindStringSubmatch(e.ErrorText)
+		ppn := ""
+		if match != nil {
+			ppn = match[1]
+		}
 		return &NotFoundError{ppn}
-	} else if strings.Contains(e.ErrorText, "invalid character") {
+	} else if strings.Contains(e.ErrorText, "Invalid char") {
 		return &InvalidRequestError{}
 	} else {
-		return errors.New("unknown error")
+		return &UnknownError{}
 	}
 }
 
