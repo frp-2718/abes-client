@@ -38,31 +38,56 @@ func TestDo(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			} else if r.URL.Path == "/not_found" {
 				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte(`
-                <?xml version="1.0" encoding="UTF-8" ?>
-                    <sudoc service="multiwhere">
-                    <error>Found a null xml in result : values={ppn=notfound}, query=select autorites.MULTIWHERE(#ppn#) from dual</error>
-                    </sudoc>
-                `))
-			} else if r.URL.Path == "/empty" {
-				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte(`
-                <?xml version="1.0" encoding="UTF-8" ?>
-                    <sudoc service="multiwhere">
-                    <error>Invalid char in query string, values={}, query=select autorites.MULTIWHERE(#ppn#) from dual</error>
-                    </sudoc>
-                `))
 			} else {
 				w.WriteHeader(http.StatusNotFound)
 			}
 		}))
 	defer server.Close()
 
-	// s := New(nil)
-	// value, _ := s.do(server.URL + "/ppn")
-	// body, _ := io.ReadAll(value.Body)
-	// value.Body.Close()
-	// if string(body) != "fixed" {
-	// 	t.Error("error")
-	// }
+	tests := []struct {
+		name string
+		url  string
+		want int
+	}{
+		{"ok", "/ok", http.StatusOK},
+		{"not_found", "/not_found", http.StatusInternalServerError},
+		{"unexpected", "/unexpected", http.StatusNotFound},
+	}
+
+	s := New(nil)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, _ := s.do(server.URL + test.url)
+			if test.want != got.StatusCode {
+				t.Errorf("want %v status code, got %v", test.want, got.StatusCode)
+			}
+		})
+	}
+}
+
+func TestBuildURL(t *testing.T) {
+	tests := []struct {
+		name string
+		base string
+		path string
+		want string
+	}{
+		{"empty base and path", "", "", "/"},
+		{"empty base", "", "/path", "/path"},
+		{"empty path", "base/", "", "base/"},
+		{"whithout separator", "base", "path", "base/path"},
+		{"with base separator", "base/", "path", "base/path"},
+		{"with path separator", "base", "/path", "base/path"},
+		{"with both separator", "base/", "/path", "base/path"},
+	}
+
+	s := New(nil)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := s.buildURL(test.base, test.path)
+			if test.want != got {
+				t.Errorf("want %v, got %v", test.want, got)
+			}
+		})
+	}
 }

@@ -3,6 +3,7 @@ package sudoc
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"testing"
@@ -56,7 +57,13 @@ func TestDecodeError(t *testing.T) {
                     <sudoc service="multiwhere">
                     <error>unknown</error>
                     </sudoc>`)))},
-			want: &UnknownError{},
+			want: &UnexpectedError{},
+		},
+		{
+			name: "empty body",
+			input: &http.Response{
+				StatusCode: http.StatusInternalServerError},
+			want: &UnexpectedError{},
 		},
 	}
 
@@ -78,10 +85,10 @@ func TestDecodeError(t *testing.T) {
 					if !errors.As(got, &invalid) {
 						t.Errorf("want InvalidRequestError, got %v", got)
 					}
-				case *UnknownError:
-					var unknown *UnknownError
+				case *UnexpectedError:
+					var unknown *UnexpectedError
 					if !errors.As(got, &unknown) {
-						t.Errorf("want UnknownError, got %v", got)
+						t.Errorf("want UnexpectedError, got %v", got)
 					}
 				default:
 					t.Errorf("unexpected error type: %T", got)
@@ -91,43 +98,48 @@ func TestDecodeError(t *testing.T) {
 	}
 }
 
-// func decodeError(r *http.Response) error {
-// 	content, err := io.ReadAll(r.Body)
-// 	if err != nil {
-// 		log.Println("decodeError: unable to read HTTP response body")
-// 		return err
-// 	}
-// 	r.Body.Close()
+func TestCheckForError(t *testing.T) {
+	tests := []struct {
+		name  string
+		input *http.Response
+		want  error
+	}{
+		{
+			name: "500",
+			input: &http.Response{
+				StatusCode: http.StatusInternalServerError},
+			want: &UnexpectedError{},
+		},
+		{
+			name: "404",
+			input: &http.Response{
+				StatusCode: http.StatusNotFound},
+			want: errors.New(fmt.Sprintf("unknown error: HTTP %d", http.StatusNotFound)),
+		},
+		{
+			name: "200",
+			input: &http.Response{
+				StatusCode: http.StatusOK},
+			want: nil,
+		},
+		{
+			name: "206",
+			input: &http.Response{
+				StatusCode: http.StatusPartialContent},
+			want: nil,
+		},
+	}
 
-// 	var e multiwhere_error
-// 	err = xml.Unmarshal(content, &e)
-// 	if err != nil {
-// 		log.Println("decodeError: unable to unmarshal XML content")
-// 		return err
-// 	}
-
-// 	if strings.Contains(e.ErrorText, "null xml") {
-// 		re := regexp.MustCompile(`ppn=([^}]+)`)
-// 		match := re.FindStringSubmatch(e.ErrorText)
-// 		ppn := ""
-// 		if match != nil {
-// 			ppn = match[1]
-// 		}
-// 		return &NotFoundError{ppn}
-// 	} else if strings.Contains(e.ErrorText, "invalid character") {
-// 		return &InvalidRequestError{}
-// 	} else {
-// 		return errors.New("unknown error")
-// 	}
-// }
-
-// // multiwhere returns 500 for any error
-// func checkForErrors(r *http.Response) error {
-// 	if r.StatusCode == http.StatusInternalServerError {
-// 		return decodeError(r)
-// 	} else if r.StatusCode >= 200 && r.StatusCode <= 299 {
-// 		return nil
-// 	} else {
-// 		return errors.New(fmt.Sprintf("Unknown error: HTTP %d", r.StatusCode))
-// 	}
-// }
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := checkForErrors(test.input)
+			if test.want != nil {
+				if got == nil {
+					t.Errorf("want nil, got %v", got)
+				} else if test.want.Error() != got.Error() {
+					t.Errorf("want %v, got %v", test.want.Error(), got.Error())
+				}
+			}
+		})
+	}
+}

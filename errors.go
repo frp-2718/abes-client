@@ -29,15 +29,18 @@ func (e *NotFoundError) Error() string {
 	return fmt.Sprintf("%s not found", e.PPN)
 }
 
-type UnknownError struct {
+type UnexpectedError struct {
 	PPN string
 }
 
-func (e *UnknownError) Error() string {
-	return fmt.Sprint("unknown error", e.PPN)
+func (e *UnexpectedError) Error() string {
+	return fmt.Sprint("unexpected error", e.PPN)
 }
 
 func decodeError(r *http.Response) error {
+	if r.Body == nil {
+		return &UnexpectedError{}
+	}
 	content, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Println("decodeError: unable to read HTTP response body")
@@ -63,7 +66,7 @@ func decodeError(r *http.Response) error {
 	} else if strings.Contains(e.ErrorText, "Invalid char") {
 		return &InvalidRequestError{}
 	} else {
-		return &UnknownError{}
+		return &UnexpectedError{}
 	}
 }
 
@@ -74,6 +77,6 @@ func checkForErrors(r *http.Response) error {
 	} else if r.StatusCode >= 200 && r.StatusCode <= 299 {
 		return nil
 	} else {
-		return errors.New(fmt.Sprintf("Unknown error: HTTP %d", r.StatusCode))
+		return errors.New(fmt.Sprintf("unknown error: HTTP %d", r.StatusCode))
 	}
 }

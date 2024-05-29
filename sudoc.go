@@ -54,11 +54,12 @@ func New(client *http.Client) *Sudoc {
 	return sudoc
 }
 
-// Assume that ppns are valid and unique.
+// Assume that ppns are valid and unique
 func (s *Sudoc) Locations(ppns []string) map[string][]Library {
 	ppnStrings := s.concatPPNs(ppns, MAX_MULTIWHERE_PPNS)
 	result := make(map[string][]Library)
 	for _, p := range ppnStrings {
+		// TODO: handle do() errors
 		res, _ := s.do(s.buildURL(BASE_URL, p))
 		body, _ := io.ReadAll(res.Body)
 		res.Body.Close()

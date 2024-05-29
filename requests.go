@@ -10,7 +10,13 @@ func (s *Sudoc) do(url string) (*http.Response, error) {
 }
 
 func (s *Sudoc) buildURL(base, path string) string {
-	return base + path
+	if !strings.HasSuffix(base, "/") && !strings.HasPrefix(path, "/") {
+		return base + "/" + path
+	} else if strings.HasSuffix(base, "/") && strings.HasPrefix(path, "/") {
+		return base + path[1:]
+	} else {
+		return base + path
+	}
 }
 
 func (s *Sudoc) concatPPNs(ppns []string, max_ppns int) []string {
