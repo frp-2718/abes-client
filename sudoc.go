@@ -75,3 +75,7 @@ func (s *Sudoc) Locations(ppns []string) map[string][]Library {
 	}
 	return result
 }
+
+func (s *Sudoc) do(url string) (*http.Response, error) {
+	return http.Get(url)
+}

@@ -1,13 +1,8 @@
 package sudoc
 
 import (
-	"net/http"
 	"strings"
 )
-
-func (s *Sudoc) do(url string) (*http.Response, error) {
-	return http.Get(url)
-}
 
 func (s *Sudoc) buildURL(base, path string) string {
 	if !strings.HasSuffix(base, "/") && !strings.HasPrefix(path, "/") {
