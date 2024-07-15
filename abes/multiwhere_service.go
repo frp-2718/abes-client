@@ -2,13 +2,20 @@ package abes
 
 import (
 	"encoding/xml"
+	"io"
+	"slices"
 	"strconv"
 	"strings"
 )
 
 // MultiwhereService wraps www.sudoc.fr/services/multiwhere/
-type MultiwhereService service
+type MultiwhereService struct {
+	service
+	endpoint string
+	max_ppns int
+}
 
+// Library represents a location.
 type Library struct {
 	XMLName   xml.Name `xml:"library"`
 	RCR       string   `xml:"rcr"`
@@ -45,4 +52,83 @@ func (l Library) String() string {
 	sb.WriteString(strconv.FormatFloat(l.Longitude, 'f', -1, 64))
 	sb.WriteString(")")
 	return sb.String()
+}
+
+// GetLocations returns the list of the locations of the given PPN.
+func (ms *MultiwhereService) GetLocations(ppn string) []Library {
+	ppnList := []string{ppn}
+
+	res := ms.GetMultiLocations(ppnList, 1)
+	return res[ppn]
+}
+
+// GetMultiLocations returns a map associating each valid PPN to its locations,
+// represented by a list of libraries.
+func (ms *MultiwhereService) GetMultiLocations(ppns []string, max_ppns int) map[string][]Library {
+	ppnStrings := ms.concatPPNs(ppns, max_ppns)
+	result := make(map[string][]Library)
+
+	for _, p := range ppnStrings {
+		// TODO: handle do() errors
+		res, _ := ms.client.Get(ms.buildURL(ms.endpoint, p))
+		body, _ := io.ReadAll(res.Body)
+		res.Body.Close()
+
+		var sr serviceResult
+		xml.Unmarshal(body, &sr)
+
+		for _, query := range sr.Queries {
+			for _, library := range query.Result.Libraries {
+				result[query.PPN] = append(result[query.PPN], library)
+			}
+		}
+	}
+	return result
+}
+
+// GetMultiLocationsWithErrors returns a map associating each valid PPN to its
+// locations - represented by a list of libraries - and a list of the  invalid
+// PPNs among the requested ones.
+func (ms *MultiwhereService) GetMultiLocationsWithErrors(ppns []string, max_ppns int) (map[string][]Library, []string) {
+	result := ms.GetMultiLocations(ppns, max_ppns)
+	var invalid_ppns []string
+	var found_ppns []string
+	for k := range result {
+		found_ppns = append(found_ppns, k)
+	}
+	for _, ppn := range ppns {
+		if !slices.Contains(found_ppns, ppn) {
+			invalid_ppns = append(invalid_ppns, ppn)
+		}
+	}
+	return result, invalid_ppns
+}
+
+// concatPPNs returns a list of what will be parameters for the multiwhere
+// request, ie a list of concatenated PPNs.
+func (ms *MultiwhereService) concatPPNs(ppns []string, max_ppns int) []string {
+	if max_ppns < 1 {
+		max_ppns = 1
+	} else if max_ppns > ms.max_ppns {
+		max_ppns = ms.max_ppns
+	}
+	res := []string{}
+	for len(ppns) > max_ppns {
+		res = append(res, strings.Join(ppns[:max_ppns], ","))
+		ppns = ppns[max_ppns:]
+	}
+	if len(ppns) > 0 {
+		res = append(res, strings.Join(ppns, ","))
+	}
+	return res
+}
+
+func (ms *MultiwhereService) buildURL(base, path string) string {
+	if !strings.HasSuffix(base, "/") && !strings.HasPrefix(path, "/") {
+		return base + "/" + path
+	} else if strings.HasSuffix(base, "/") && strings.HasPrefix(path, "/") {
+		return base + path[1:]
+	} else {
+		return base + path
+	}
 }
