@@ -1,8 +1,12 @@
 package abes
 
 import (
+	"crypto/tls"
 	"encoding/xml"
+	"fmt"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"slices"
 	"testing"
 
@@ -89,10 +93,28 @@ func TestBuildURL(t *testing.T) {
 }
 
 func TestGetMultiLocations(t *testing.T) {
-	ac := NewAbesClient(nil)
+	server := httptest.NewTLSServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"msg": "ok world"}`))
+		}))
+	defer server.Close()
+
+	url, _ := url.Parse(server.URL)
+	client := &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyURL(url),
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+	}
+
+	ac := NewAbesClient(client)
 	ppns := []string{"144089661", "154923206"}
 
 	result := ac.Multiwhere.GetMultiLocations(ppns, 0)
+	fmt.Println(result)
 }
 
 // // GetMultiLocations returns a map associating each valid PPN to its locations,

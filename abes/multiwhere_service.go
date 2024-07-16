@@ -2,6 +2,7 @@ package abes
 
 import (
 	"encoding/xml"
+	"fmt"
 	"io"
 	"net/http"
 	"slices"
@@ -82,7 +83,11 @@ func (ms *MultiwhereService) GetMultiLocations(ppns []string, max_ppns int) map[
 
 	for _, p := range ppnStrings {
 		// TODO: handle do() errors
-		res, _ := ms.client.Get(ms.buildURL(ms.endpoint, p))
+		res, err := ms.client.Get(ms.buildURL(ms.endpoint, p))
+		if err != nil {
+			fmt.Println(err)
+			return nil
+		}
 		body, _ := io.ReadAll(res.Body)
 		res.Body.Close()
 
