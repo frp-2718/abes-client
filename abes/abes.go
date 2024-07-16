@@ -14,7 +14,7 @@ type service struct {
 
 // Abes contains all exposed APIs
 type Abes struct {
-	multiwhere *MultiwhereService
+	Multiwhere *MultiwhereService
 }
 
 // NewAbesClient returns a new initialized Abes client.
@@ -23,9 +23,6 @@ func NewAbesClient(client *http.Client) *Abes {
 		client = http.DefaultClient
 	}
 	abes := new(Abes)
-	abes.multiwhere = new(MultiwhereService)
-	abes.multiwhere.client = client
-	abes.multiwhere.endpoint = multiwhereEndpoint
-	abes.multiwhere.max_ppns = 50
+	abes.Multiwhere = newMultiwhereService(client, multiwhereEndpoint)
 	return abes
 }

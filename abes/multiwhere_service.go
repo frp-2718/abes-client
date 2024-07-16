@@ -3,6 +3,7 @@ package abes
 import (
 	"encoding/xml"
 	"io"
+	"net/http"
 	"slices"
 	"strconv"
 	"strings"
@@ -14,6 +15,8 @@ type MultiwhereService struct {
 	endpoint string
 	max_ppns int
 }
+
+const MAX_MULTIWHERE_PPNS = 50
 
 // Library represents a location.
 type Library struct {
@@ -52,6 +55,15 @@ func (l Library) String() string {
 	sb.WriteString(strconv.FormatFloat(l.Longitude, 'f', -1, 64))
 	sb.WriteString(")")
 	return sb.String()
+}
+
+// newMultiwhereService returnes a configured MultiwhereService instance.
+func newMultiwhereService(client *http.Client, endpoint string) *MultiwhereService {
+	ms := new(MultiwhereService)
+	ms.client = client
+	ms.endpoint = endpoint
+	ms.max_ppns = MAX_MULTIWHERE_PPNS
+	return ms
 }
 
 // GetLocations returns the list of the locations of the given PPN.
