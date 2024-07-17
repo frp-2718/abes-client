@@ -4,8 +4,6 @@ Version 0.2
 
 ## Examples
 
-To run examples :
-
 ```{bash}
 $ go run example/locations.go
 ```

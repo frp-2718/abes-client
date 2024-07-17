@@ -1,4 +1,4 @@
-module github.com/frp-2718/sudoc-client
+module github.com/frp-2718/abes-client
 
 go 1.22.5
 

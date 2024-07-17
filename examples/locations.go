@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/frp-2718/sudoc-client/abes"
+	"github.com/frp-2718/abes-client/abes"
 )
 
 func main() {
