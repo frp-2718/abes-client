@@ -10,7 +10,7 @@ func main() {
 	ppns := []string{"144089661", "154923206"}
 
 	ac := abes.NewAbesClient(nil)
-	res := ac.Multiwhere.GetMultiLocations(ppns, 20)
+	res, _ := ac.Multiwhere.GetMultiLocations(ppns, 20)
 
 	for k, v := range res {
 		fmt.Println(k)

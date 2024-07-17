@@ -1,12 +1,9 @@
 package abes
 
 import (
-	"crypto/tls"
 	"encoding/xml"
 	"fmt"
 	"net/http"
-	"net/http/httptest"
-	"net/url"
 	"slices"
 	"testing"
 
@@ -93,24 +90,12 @@ func TestBuildURL(t *testing.T) {
 }
 
 func TestGetMultiLocations(t *testing.T) {
-	server := httptest.NewTLSServer(http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"msg": "ok world"}`))
-		}))
-	defer server.Close()
+	ts := newTestServer()
+	defer ts.close()
 
-	url, _ := url.Parse(server.URL)
-	client := &http.Client{
-		Transport: &http.Transport{
-			Proxy: http.ProxyURL(url),
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		},
-	}
+	ts.simulateNetworkFailure(true)
 
-	ac := NewAbesClient(client)
+	ac := NewAbesClient(ts.client)
 	ppns := []string{"144089661", "154923206"}
 
 	result := ac.Multiwhere.GetMultiLocations(ppns, 0)
@@ -176,17 +161,18 @@ func TestGetMultiLocations(t *testing.T) {
 // // GetMultiLocationsWithErrors returns a map associating each valid PPN to its
 // // locations - represented by a list of libraries - and a list of the  invalid
 // // PPNs among the requested ones.
-// func (ms *MultiwhereService) GetMultiLocationsWithErrors(ppns []string, max_ppns int) (map[string][]Library, []string) {
-// 	result := ms.GetMultiLocations(ppns, max_ppns)
-// 	var invalid_ppns []string
-// 	var found_ppns []string
-// 	for k := range result {
-// 		found_ppns = append(found_ppns, k)
-// 	}
-// 	for _, ppn := range ppns {
-// 		if !slices.Contains(found_ppns, ppn) {
-// 			invalid_ppns = append(invalid_ppns, ppn)
-// 		}
-// 	}
-// 	return result, invalid_ppns
-// }
+//
+//	func (ms *MultiwhereService) GetMultiLocationsWithErrors(ppns []string, max_ppns int) (map[string][]Library, []string) {
+//		result := ms.GetMultiLocations(ppns, max_ppns)
+//		var invalid_ppns []string
+//		var found_ppns []string
+//		for k := range result {
+//			found_ppns = append(found_ppns, k)
+//		}
+//		for _, ppn := range ppns {
+//			if !slices.Contains(found_ppns, ppn) {
+//				invalid_ppns = append(invalid_ppns, ppn)
+//			}
+//		}
+//		return result, invalid_ppns
+//	}
