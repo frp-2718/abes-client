@@ -75,7 +75,8 @@ func (ms *MultiwhereService) GetLocations(ppn string) ([]Library, error) {
 }
 
 // GetMultiLocations returns a map associating each valid PPN to its locations,
-// represented by a list of libraries.
+// represented by a list of libraries. If a PPN is not found, it is ignored.
+// See GetMultiLocationsWithErrors.
 func (ms *MultiwhereService) GetMultiLocations(ppns []string, max_ppns int) (map[string][]Library, error) {
 	ppnStrings := ms.concatPPNs(ppns, max_ppns)
 	result := make(map[string][]Library)
@@ -83,7 +84,7 @@ func (ms *MultiwhereService) GetMultiLocations(ppns []string, max_ppns int) (map
 	for _, p := range ppnStrings {
 		res, err := ms.client.Get(ms.buildURL(ms.endpoint, p))
 		if err != nil {
-			return nil, &NetworkError{err, "HTTP protocol error"}
+			return nil, &NetworkError{"HTTP protocol error"}
 		}
 		if res.StatusCode == http.StatusOK {
 			body, _ := io.ReadAll(res.Body)
@@ -110,8 +111,8 @@ func (ms *MultiwhereService) GetMultiLocationsWithErrors(ppns []string, max_ppns
 	if err != nil {
 		return nil, nil, err
 	}
-	var invalid_ppns []string
-	var found_ppns []string
+	invalid_ppns := []string{}
+	found_ppns := []string{}
 	for k := range result {
 		found_ppns = append(found_ppns, k)
 	}

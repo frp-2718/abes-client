@@ -90,89 +90,185 @@ func TestBuildURL(t *testing.T) {
 }
 
 func TestGetMultiLocations(t *testing.T) {
-	ts := newTestServer()
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/services/multiwhere/notfound":
+			http.Error(w, "not found", http.StatusInternalServerError)
+			return
+		case r.URL.Path == "/services/multiwhere/111111111,154923206":
+			w.Header().Set("Content-Type", "application/xml")
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprintln(w, `<sudoc service="multiwhere"><query>
+                <ppn>154923206</ppn>
+                <result>
+                <library>
+                <rcr>751052105</rcr>
+                <shortname>PARIS-BIS, Fonds général</shortname>
+                <latitude>48.8492618</latitude>
+                <longitude>2.3433311</longitude>
+                </library>
+                <library>
+                <rcr>751052116</rcr>
+                <shortname>PARIS-Bib. Sainte Geneviève</shortname>
+                <latitude>48.8467139</latitude>
+                <longitude>2.3463854</longitude>
+                </library>
+                </result>
+                </query>
+                </sudoc>`)
+		default:
+			fmt.Println(r.URL.Path)
+		}
+	}
+	ts := newTestServer(handler)
 	defer ts.close()
 
-	ts.simulateNetworkFailure(true)
-
+	assert := assert.New(t)
 	ac := NewAbesClient(ts.client)
-	ppns := []string{"144089661", "154923206"}
 
-	result := ac.Multiwhere.GetMultiLocations(ppns, 0)
-	fmt.Println(result)
+	result, err := ac.Multiwhere.GetMultiLocations([]string{"notfound"}, 0)
+	assert.NoError(err, "notfound should return a 500 response, got an error")
+	assert.Equal(map[string][]Library{}, result)
+
+	ppns := []string{"111111111", "154923206"}
+	xml := xml.Name{Local: "library"}
+	result, err = ac.Multiwhere.GetMultiLocations(ppns, 0)
+	assert.NoError(err, "ppns should return a 200 response, got an error")
+	expected := map[string][]Library{
+		"154923206": {
+			Library{xml, "751052105", "PARIS-BIS, Fonds général", 48.8492618, 2.3433311},
+			Library{xml, "751052116", "PARIS-Bib. Sainte Geneviève", 48.8467139, 2.3463854},
+		},
+	}
+	assert.Equal(expected, result)
+
+	ts.simulateNetworkFailure(true)
+	result, err = ac.Multiwhere.GetMultiLocations([]string{"network_error"}, 0)
+	assert.NotNil(err)
+	assert.IsType(&NetworkError{}, err)
 }
 
-// // GetMultiLocations returns a map associating each valid PPN to its locations,
-// // represented by a list of libraries.
-// func (ms *MultiwhereService) GetMultiLocations(ppns []string, max_ppns int) map[string][]Library {
-// 	ppnStrings := ms.concatPPNs(ppns, max_ppns)
-// 	result := make(map[string][]Library)
+func TestGetLocations(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/services/multiwhere/notfound":
+			http.Error(w, "not found", http.StatusInternalServerError)
+			return
+		case r.URL.Path == "/services/multiwhere/154923206":
+			w.Header().Set("Content-Type", "application/xml")
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprintln(w, `<sudoc service="multiwhere"><query>
+                <ppn>154923206</ppn>
+                <result>
+                <library>
+                <rcr>751052105</rcr>
+                <shortname>PARIS-BIS, Fonds général</shortname>
+                <latitude>48.8492618</latitude>
+                <longitude>2.3433311</longitude>
+                </library>
+                <library>
+                <rcr>751052116</rcr>
+                <shortname>PARIS-Bib. Sainte Geneviève</shortname>
+                <latitude>48.8467139</latitude>
+                <longitude>2.3463854</longitude>
+                </library>
+                </result>
+                </query>
+                </sudoc>`)
+		default:
+			fmt.Println(r.URL.Path)
+		}
+	}
+	ts := newTestServer(handler)
+	defer ts.close()
 
-// 	for _, p := range ppnStrings {
-// 		// TODO: handle do() errors
-// 		res, _ := ms.client.Get(ms.buildURL(ms.endpoint, p))
-// 		body, _ := io.ReadAll(res.Body)
-// 		res.Body.Close()
+	assert := assert.New(t)
+	ac := NewAbesClient(ts.client)
 
-// 		var sr serviceResult
-// 		xml.Unmarshal(body, &sr)
+	result, err := ac.Multiwhere.GetLocations("notfound")
+	assert.NoError(err, "notfound should return a 500 response, got an error")
+	assert.Nil(result, "notfound should return a nil slice")
 
-// 		for _, query := range sr.Queries {
-// 			for _, library := range query.Result.Libraries {
-// 				result[query.PPN] = append(result[query.PPN], library)
-// 			}
-// 		}
-// 	}
-// 	return result
-// }
-// // Library represents a location.
-// type Library struct {
-// 	XMLName   xml.Name `xml:"library"`
-// 	RCR       string   `xml:"rcr"`
-// 	Shortname string   `xml:"shortname"`
-// 	Latitude  float64  `xml:"latitude"`
-// 	Longitude float64  `xml:"longitude"`
-// }
+	ppn := "154923206"
+	xml := xml.Name{Local: "library"}
+	result, err = ac.Multiwhere.GetLocations(ppn)
+	assert.NoError(err, "ppns should return a 200 response, got an error")
+	expected := []Library{
+		{xml, "751052105", "PARIS-BIS, Fonds général", 48.8492618, 2.3433311},
+		{xml, "751052116", "PARIS-Bib. Sainte Geneviève", 48.8467139, 2.3463854},
+	}
+	assert.Equal(expected, result)
 
-// type result struct {
-// 	XMLName   xml.Name  `xml:"result"`
-// 	Libraries []Library `xml:"library"`
-// }
+	ts.simulateNetworkFailure(true)
+	result, err = ac.Multiwhere.GetLocations("network_error")
+	assert.NotNil(err)
+	assert.IsType(&NetworkError{}, err)
+}
 
-// type query struct {
-// 	XMLName xml.Name `xml:"query"`
-// 	PPN     string   `xml:"ppn"`
-// 	Result  result   `xml:"result"`
-// }
+func TestGetMultiLocationsWithErrors(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/services/multiwhere/notfound":
+			http.Error(w, "not found", http.StatusInternalServerError)
+			return
+		case r.URL.Path == "/services/multiwhere/111111111,154923206" ||
+			r.URL.Path == "/services/multiwhere/154923206":
+			w.Header().Set("Content-Type", "application/xml")
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprintln(w, `<sudoc service="multiwhere"><query>
+                <ppn>154923206</ppn>
+                <result>
+                <library>
+                <rcr>751052105</rcr>
+                <shortname>PARIS-BIS, Fonds général</shortname>
+                <latitude>48.8492618</latitude>
+                <longitude>2.3433311</longitude>
+                </library>
+                <library>
+                <rcr>751052116</rcr>
+                <shortname>PARIS-Bib. Sainte Geneviève</shortname>
+                <latitude>48.8467139</latitude>
+                <longitude>2.3463854</longitude>
+                </library>
+                </result>
+                </query>
+                </sudoc>`)
+		default:
+			fmt.Println(r.URL.Path)
+		}
+	}
+	ts := newTestServer(handler)
+	defer ts.close()
 
-// type serviceResult struct {
-// 	XMLName xml.Name `xml:"sudoc"`
-// 	Queries []query  `xml:"query"`
-// }
+	assert := assert.New(t)
+	ac := NewAbesClient(ts.client)
 
-// // GetLocations returns the list of the locations of the given PPN.
-// func (ms *MultiwhereService) GetLocations(ppn string) []Library {
-// 	ppnList := []string{ppn}
+	result, wrong, err := ac.Multiwhere.GetMultiLocationsWithErrors([]string{"notfound"}, 0)
+	assert.NoError(err, "notfound should return a 500 response, got an error")
+	assert.Equal(map[string][]Library{}, result)
+	assert.Equal([]string{"notfound"}, wrong)
 
-// 	res := ms.GetMultiLocations(ppnList, 1)
-// 	return res[ppn]
-// }
+	ppns := []string{"154923206"}
+	xml := xml.Name{Local: "library"}
+	result, wrong, err = ac.Multiwhere.GetMultiLocationsWithErrors(ppns, 0)
+	assert.NoError(err, "ppns should return a 200 response, got an error")
+	expected := map[string][]Library{
+		"154923206": {
+			Library{xml, "751052105", "PARIS-BIS, Fonds général", 48.8492618, 2.3433311},
+			Library{xml, "751052116", "PARIS-Bib. Sainte Geneviève", 48.8467139, 2.3463854},
+		},
+	}
+	assert.Equal(expected, result)
+	assert.Equal([]string{}, wrong)
 
-// // GetMultiLocationsWithErrors returns a map associating each valid PPN to its
-// // locations - represented by a list of libraries - and a list of the  invalid
-// // PPNs among the requested ones.
-//
-//	func (ms *MultiwhereService) GetMultiLocationsWithErrors(ppns []string, max_ppns int) (map[string][]Library, []string) {
-//		result := ms.GetMultiLocations(ppns, max_ppns)
-//		var invalid_ppns []string
-//		var found_ppns []string
-//		for k := range result {
-//			found_ppns = append(found_ppns, k)
-//		}
-//		for _, ppn := range ppns {
-//			if !slices.Contains(found_ppns, ppn) {
-//				invalid_ppns = append(invalid_ppns, ppn)
-//			}
-//		}
-//		return result, invalid_ppns
-//	}
+	ppns = []string{"111111111", "154923206"}
+	result, wrong, err = ac.Multiwhere.GetMultiLocationsWithErrors(ppns, 0)
+	assert.NoError(err, "ppns should return a 200 response, got an error")
+	assert.Equal(expected, result)
+	assert.Equal([]string{"111111111"}, wrong)
+
+	ts.simulateNetworkFailure(true)
+	result, wrong, err = ac.Multiwhere.GetMultiLocationsWithErrors([]string{"network_error"}, 0)
+	assert.NotNil(err)
+	assert.IsType(&NetworkError{}, err)
+}

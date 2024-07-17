@@ -1,7 +1,7 @@
 package abes
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 )
@@ -16,16 +16,9 @@ type testServer struct {
 }
 
 // newTestServer creates and configures the server and the associated client.
-func newTestServer() *testServer {
+func newTestServer(handler http.HandlerFunc) *testServer {
 	ts := new(testServer)
-	ts.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if ts.networkFailure {
-			http.Error(w, "network failure", http.StatusServiceUnavailable)
-			return
-		}
-		fmt.Println(r.URL)
-		fmt.Fprintln(w, "Hello, client")
-	}))
+	ts.server = httptest.NewServer(handler)
 	ts.roundTripper = &customRoundTripper{
 		originalTransport: http.DefaultTransport,
 		testServerURL:     ts.server.URL,
@@ -54,9 +47,9 @@ type customRoundTripper struct {
 }
 
 func (c *customRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	// if c.networkFailure {
-	// 	return nil, errors.New("network failure")
-	// }
+	if c.networkFailure {
+		return nil, errors.New("network failure")
+	}
 
 	// redirection
 	req.URL.Host = c.testServerURL[7:]
