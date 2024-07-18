@@ -15,6 +15,7 @@ type service struct {
 // Abes contains all exposed APIs
 type Abes struct {
 	Multiwhere *MultiwhereService
+	UnimarcXML *UnimarcXMLService
 }
 
 // NewAbesClient returns a new initialized Abes client.
@@ -24,5 +25,6 @@ func NewAbesClient(client *http.Client) *Abes {
 	}
 	abes := new(Abes)
 	abes.Multiwhere = newMultiwhereService(client, multiwhereEndpoint)
+	abes.UnimarcXML = newUnimarcXMLService(client, sudocBaseURL)
 	return abes
 }

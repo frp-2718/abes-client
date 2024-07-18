@@ -2,6 +2,7 @@ package abes
 
 // NotFoundError occurs when the server returns a 404 or 500 response.
 // Some ABES API use HTTP 500 errors to report a "not found" error.
+// TODO: wrap "real" error
 type NotFoundError struct {
 	Message string
 }
@@ -15,5 +16,13 @@ type NetworkError struct {
 }
 
 func (e *NetworkError) Error() string {
+	return e.Message
+}
+
+type SystemError struct {
+	Message string
+}
+
+func (e *SystemError) Error() string {
 	return e.Message
 }

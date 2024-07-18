@@ -87,6 +87,7 @@ func (ms *MultiwhereService) GetMultiLocations(ppns []string, max_ppns int) (map
 			return nil, &NetworkError{"HTTP protocol error"}
 		}
 		if res.StatusCode == http.StatusOK {
+			// TODO: handle that error (?)
 			body, _ := io.ReadAll(res.Body)
 			res.Body.Close()
 

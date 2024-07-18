@@ -5,17 +5,12 @@ import (
 	"errors"
 )
 
-// Unimarc2marcxmlService wraps www.sudoc.fr/PPN.xml
-type Unimarc2marcxmlService struct {
-	service
-}
-
 type BibRecord struct {
 	RawXMLRecord []byte
-	ParsedRecord Record
+	ParsedRecord MarcRecord
 }
 
-type Record struct {
+type MarcRecord struct {
 	XMLName       xml.Name       `xml:"record"`
 	Leader        string         `xml:"leader"`
 	Controlfields []Controlfield `xml:"controlfield"`
@@ -49,11 +44,11 @@ type Field interface {
 
 // NewRecord converts xml data into a Record, assuming that the provided
 // xml data is a valid mono-record marcXML.
-func NewRecord(xmlData []byte) (*Record, error) {
+func NewRecord(xmlData []byte) (*MarcRecord, error) {
 	if xmlData == nil {
 		return nil, errors.New("NewRecord: can't process nil data")
 	}
-	var r Record
+	var r MarcRecord
 	err := xml.Unmarshal(xmlData, &r)
 	if err != nil {
 		//log.Printf("NewRecord: %s", err)
@@ -65,7 +60,7 @@ func NewRecord(xmlData []byte) (*Record, error) {
 // Indicators returns a list of pairs of indicators for a given tag. One entry
 // of the list corresponds to a repeated field. The list is nil if the field is
 // a controlfield.
-func (r *Record) Indicators(tag string) [][2]string {
+func (r *MarcRecord) Indicators(tag string) [][2]string {
 	for _, field := range r.Controlfields {
 		if field.Tag == tag {
 			return nil
@@ -81,7 +76,7 @@ func (r *Record) Indicators(tag string) [][2]string {
 }
 
 // GetField returns all fields with corresponding tag.
-func (r *Record) GetField(tag string) []Field {
+func (r *MarcRecord) GetField(tag string) []Field {
 	var res []Field
 	for _, field := range r.Controlfields {
 		if field.Tag == tag {
