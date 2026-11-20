@@ -40,8 +40,6 @@ func TestNewMultiwhereService(t *testing.T) {
 }
 
 func TestConcatPPNs(t *testing.T) {
-	ac := NewAbesClient(nil)
-
 	tests := []struct {
 		input    []string
 		expected []string
@@ -56,7 +54,7 @@ func TestConcatPPNs(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			result := ac.Multiwhere.concatPPNs(test.input, 2)
+			result := concatValues(test.input, 2, MAX_MULTIWHERE_PPNS)
 			if !slices.Equal(result, test.expected) {
 				t.Errorf("PPNs %v: got %v, want %v", test.input, result, test.expected)
 			}
@@ -65,7 +63,6 @@ func TestConcatPPNs(t *testing.T) {
 }
 
 func TestBuildURL(t *testing.T) {
-	ac := NewAbesClient(nil)
 	tests := []struct {
 		base, path string
 		expected   string
@@ -81,7 +78,7 @@ func TestBuildURL(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			result := ac.Multiwhere.buildURL(test.base, test.path)
+			result := joinURLPath(test.base, test.path)
 			if result != test.expected {
 				t.Errorf("(%s,%s): got %s, want %s", test.base, test.path, result, test.expected)
 			}

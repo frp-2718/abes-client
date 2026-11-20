@@ -78,11 +78,11 @@ func (ms *MultiwhereService) GetLocations(ppn string) ([]Library, error) {
 // represented by a list of libraries. If a PPN is not found, it is ignored.
 // See GetMultiLocationsWithErrors.
 func (ms *MultiwhereService) GetMultiLocations(ppns []string, max_ppns int) (map[string][]Library, error) {
-	ppnStrings := ms.concatPPNs(ppns, max_ppns)
+	ppnStrings := concatValues(ppns, max_ppns, ms.max_ppns)
 	result := make(map[string][]Library)
 
 	for _, p := range ppnStrings {
-		res, err := ms.client.Get(ms.buildURL(ms.endpoint, p))
+		res, err := ms.client.Get(joinURLPath(ms.endpoint, p))
 		if err != nil {
 			return nil, &NetworkError{"HTTP protocol error"}
 		}
@@ -123,33 +123,4 @@ func (ms *MultiwhereService) GetMultiLocationsWithErrors(ppns []string, max_ppns
 		}
 	}
 	return result, invalid_ppns, nil
-}
-
-// concatPPNs returns a list of what will be parameters for the multiwhere
-// request, ie a list of concatenated PPNs.
-func (ms *MultiwhereService) concatPPNs(ppns []string, max_ppns int) []string {
-	if max_ppns < 1 {
-		max_ppns = MAX_MULTIWHERE_PPNS
-	} else if max_ppns > ms.max_ppns {
-		max_ppns = ms.max_ppns
-	}
-	res := []string{}
-	for len(ppns) > max_ppns {
-		res = append(res, strings.Join(ppns[:max_ppns], ","))
-		ppns = ppns[max_ppns:]
-	}
-	if len(ppns) > 0 {
-		res = append(res, strings.Join(ppns, ","))
-	}
-	return res
-}
-
-func (ms *MultiwhereService) buildURL(base, path string) string {
-	if !strings.HasSuffix(base, "/") && !strings.HasPrefix(path, "/") {
-		return base + "/" + path
-	} else if strings.HasSuffix(base, "/") && strings.HasPrefix(path, "/") {
-		return base + path[1:]
-	} else {
-		return base + path
-	}
 }
