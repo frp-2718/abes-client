@@ -112,7 +112,7 @@ func (is *Isbn2ppnService) GetMultiPPNs(isbns []string, max_isbns int) (map[stri
 			xml.Unmarshal(body, &sr)
 
 			for _, query := range sr.Queries {
-				result[p] = query
+				result[query.ISBN] = query
 			}
 		}
 	}
