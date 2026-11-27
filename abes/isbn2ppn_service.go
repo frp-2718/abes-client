@@ -2,8 +2,6 @@ package abes
 
 import (
 	"encoding/xml"
-	"fmt"
-	"io"
 	"net/http"
 	"strings"
 )
@@ -99,21 +97,18 @@ func (is *Isbn2ppnService) GetMultiPPNs(isbns []string, max_isbns int) (map[stri
 
 	for _, p := range isbnStrings {
 		url := joinURLPath(is.endpoint, p)
-		res, err := is.client.Get(url)
+		body, err := is.do("Isbn2ppn.GetMultiPPNs", url, false)
 		if err != nil {
-			return nil, &NetworkError{fmt.Sprintf("HTTP protocol error requesting %q: %v", url, err)}
+			return nil, err
 		}
-		if res.StatusCode == http.StatusOK {
-			// TODO: handle that error (?)
-			body, _ := io.ReadAll(res.Body)
-			res.Body.Close()
 
-			var sr SudocResponse
-			xml.Unmarshal(body, &sr)
+		var sr SudocResponse
+		if err := xml.Unmarshal(body, &sr); err != nil {
+			return nil, &SystemError{Op: "Isbn2ppn.GetMultiPPNs", URL: url, Err: err}
+		}
 
-			for _, query := range sr.Queries {
-				result[query.ISBN] = query
-			}
+		for _, query := range sr.Queries {
+			result[query.ISBN] = query
 		}
 	}
 	return result, nil

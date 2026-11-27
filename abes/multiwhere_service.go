@@ -2,7 +2,6 @@ package abes
 
 import (
 	"encoding/xml"
-	"io"
 	"net/http"
 	"slices"
 	"strconv"
@@ -82,22 +81,20 @@ func (ms *MultiwhereService) GetMultiLocations(ppns []string, max_ppns int) (map
 	result := make(map[string][]Library)
 
 	for _, p := range ppnStrings {
-		res, err := ms.client.Get(joinURLPath(ms.endpoint, p))
+		url := joinURLPath(ms.endpoint, p)
+		body, err := ms.do("Multiwhere.GetMultiLocations", url, true)
 		if err != nil {
-			return nil, &NetworkError{"HTTP protocol error"}
+			return nil, err
 		}
-		if res.StatusCode == http.StatusOK {
-			// TODO: handle that error (?)
-			body, _ := io.ReadAll(res.Body)
-			res.Body.Close()
 
-			var sr serviceResult
-			xml.Unmarshal(body, &sr)
+		var sr serviceResult
+		if err := xml.Unmarshal(body, &sr); err != nil {
+			return nil, &SystemError{Op: "Multiwhere.GetMultiLocations", URL: url, Err: err}
+		}
 
-			for _, query := range sr.Queries {
-				for _, library := range query.Result.Libraries {
-					result[query.PPN] = append(result[query.PPN], library)
-				}
+		for _, query := range sr.Queries {
+			for _, library := range query.Result.Libraries {
+				result[query.PPN] = append(result[query.PPN], library)
 			}
 		}
 	}

@@ -39,13 +39,13 @@ func TestGetMultiPPNs(t *testing.T) {
 		requestedPaths = append(requestedPaths, r.URL.Path)
 		switch r.URL.Path {
 		case "/services/isbn2ppn/missing":
-			http.Error(w, "not found", http.StatusInternalServerError)
+			http.Error(w, "not found", http.StatusNotFound)
 		case "/services/isbn2ppn/9780000000001,9780000000002":
 			w.Header().Set("Content-Type", "application/xml")
 			fmt.Fprint(w, `<sudoc service="isbn2ppn">
-				<query><isbn>9780000000001</isbn><result><ppn>PPN1</ppn><ppn>PPN2</ppn></result><resultNoHolding><ppn>PPN3</ppn></resultNoHolding></query>
-				<query><isbn>9780000000002</isbn><result><ppn>PPN4</ppn></result></query>
-			</sudoc>`)
+                <query><isbn>9780000000001</isbn><result><ppn>PPN1</ppn><ppn>PPN2</ppn></result><resultNoHolding><ppn>PPN3</ppn></resultNoHolding></query>
+                <query><isbn>9780000000002</isbn><result><ppn>PPN4</ppn></result></query>
+            </sudoc>`)
 		default:
 			http.NotFound(w, r)
 		}
@@ -55,8 +55,10 @@ func TestGetMultiPPNs(t *testing.T) {
 	is := newIsbn2ppnService(ts.client, ts.server.URL+"/services/isbn2ppn/")
 
 	result, err := is.GetMultiPPNs([]string{"missing"}, 0)
-	assert.NoError(t, err)
-	assert.Empty(t, result)
+	var nf *NotFoundError
+	assert.ErrorAs(t, err, &nf)
+	assert.True(t, NotFound(err))
+	assert.Nil(t, result)
 
 	result, err = is.GetMultiPPNs([]string{"9780000000001", "9780000000002"}, 0)
 	assert.NoError(t, err)
@@ -73,7 +75,8 @@ func TestGetMultiPPNs(t *testing.T) {
 	ts.simulateNetworkFailure(true)
 	result, err = is.GetMultiPPNs([]string{"network_error"}, 0)
 	assert.Nil(t, result)
-	assert.IsType(t, &NetworkError{}, err)
+	var ne *NetworkError
+	assert.ErrorAs(t, err, &ne)
 }
 
 func TestGetMultiPPNsSplitsRequests(t *testing.T) {
@@ -102,7 +105,7 @@ func TestGetPPNs(t *testing.T) {
 			fmt.Fprint(w, `<sudoc service="isbn2ppn"><query><isbn>0134190440</isbn><result><ppn>191539082</ppn></result></query></sudoc>`)
 			return
 		}
-		http.Error(w, "not found", http.StatusInternalServerError)
+		http.Error(w, "not found", http.StatusNotFound)
 	}
 	ts := newTestServer(handler)
 	defer ts.close()
@@ -113,12 +116,13 @@ func TestGetPPNs(t *testing.T) {
 	assert.Equal(t, ISBNResult{ISBN: "0134190440", Holdings: []string{"191539082"}}, result)
 
 	result, err = is.GetPPNs("missing")
-	assert.NoError(t, err)
+	var nf *NotFoundError
+	assert.ErrorAs(t, err, &nf)
 	assert.Equal(t, ISBNResult{}, result)
 
 	ts.simulateNetworkFailure(true)
 	result, err = is.GetPPNs("network_error")
-	assert.IsType(t, &NetworkError{}, err)
+	var ne *NetworkError
+	assert.ErrorAs(t, err, &ne)
 	assert.Equal(t, ISBNResult{}, result)
 }
-
