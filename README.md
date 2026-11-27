@@ -11,5 +11,5 @@ Version 0.3
 ## Examples
 
 ```{bash}
-$ go run examples/locations.go
+$ go run ./examples/locations
 ```

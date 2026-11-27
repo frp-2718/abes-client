@@ -104,13 +104,13 @@ func TestGetMultiLocations(t *testing.T) {
                 <result>
                 <library>
                 <rcr>751052105</rcr>
-                <shortname>PARIS-BIS, Fonds ge\u0301ne\u0301ral</shortname>
+                <shortname>PARIS-BIS, Fonds général</shortname>
                 <latitude>48.8492618</latitude>
                 <longitude>2.3433311</longitude>
                 </library>
                 <library>
                 <rcr>751052116</rcr>
-                <shortname>PARIS-Bib. Sainte Genevie\u0300ve</shortname>
+                <shortname>PARIS-Bib. Sainte Geneviève</shortname>
                 <latitude>48.8467139</latitude>
                 <longitude>2.3463854</longitude>
                 </library>
@@ -145,8 +145,8 @@ func TestGetMultiLocations(t *testing.T) {
 	assert.NoError(err, "ppns should return a 200 response, got an error")
 	expected := map[string][]Library{
 		"154923206": {
-			Library{xml, "751052105", "PARIS-BIS, Fonds ge\u0301ne\u0301ral", 48.8492618, 2.3433311},
-			Library{xml, "751052116", "PARIS-Bib. Sainte Genevie\u0300ve", 48.8467139, 2.3463854},
+			Library{xml, "751052105", "PARIS-BIS, Fonds général", 48.8492618, 2.3433311},
+			Library{xml, "751052116", "PARIS-Bib. Sainte Geneviève", 48.8467139, 2.3463854},
 		},
 	}
 	assert.Equal(expected, result)
@@ -176,13 +176,13 @@ func TestGetLocations(t *testing.T) {
                 <result>
                 <library>
                 <rcr>751052105</rcr>
-                <shortname>PARIS-BIS, Fonds ge\u0301ne\u0301ral</shortname>
+                <shortname>PARIS-BIS, Fonds général</shortname>
                 <latitude>48.8492618</latitude>
                 <longitude>2.3433311</longitude>
                 </library>
                 <library>
                 <rcr>751052116</rcr>
-                <shortname>PARIS-Bib. Sainte Genevie\u0300ve</shortname>
+                <shortname>PARIS-Bib. Sainte Geneviève</shortname>
                 <latitude>48.8467139</latitude>
                 <longitude>2.3463854</longitude>
                 </library>
@@ -209,8 +209,8 @@ func TestGetLocations(t *testing.T) {
 	result, err = ac.Multiwhere.GetLocations(ppn)
 	assert.NoError(err, "ppns should return a 200 response, got an error")
 	expected := []Library{
-		{xml, "751052105", "PARIS-BIS, Fonds ge\u0301ne\u0301ral", 48.8492618, 2.3433311},
-		{xml, "751052116", "PARIS-Bib. Sainte Genevie\u0300ve", 48.8467139, 2.3463854},
+		{xml, "751052105", "PARIS-BIS, Fonds général", 48.8492618, 2.3433311},
+		{xml, "751052116", "PARIS-Bib. Sainte Geneviève", 48.8467139, 2.3463854},
 	}
 	assert.Equal(expected, result)
 
@@ -239,13 +239,13 @@ func TestGetMultiLocationsWithErrors(t *testing.T) {
                 <result>
                 <library>
                 <rcr>751052105</rcr>
-                <shortname>PARIS-BIS, Fonds ge\u0301ne\u0301ral</shortname>
+                <shortname>PARIS-BIS, Fonds général</shortname>
                 <latitude>48.8492618</latitude>
                 <longitude>2.3433311</longitude>
                 </library>
                 <library>
                 <rcr>751052116</rcr>
-                <shortname>PARIS-Bib. Sainte Genevie\u0300ve</shortname>
+                <shortname>PARIS-Bib. Sainte Geneviève</shortname>
                 <latitude>48.8467139</latitude>
                 <longitude>2.3463854</longitude>
                 </library>
@@ -274,8 +274,8 @@ func TestGetMultiLocationsWithErrors(t *testing.T) {
 	assert.NoError(err, "ppns should return a 200 response, got an error")
 	expected := map[string][]Library{
 		"154923206": {
-			Library{xml, "751052105", "PARIS-BIS, Fonds ge\u0301ne\u0301ral", 48.8492618, 2.3433311},
-			Library{xml, "751052116", "PARIS-Bib. Sainte Genevie\u0300ve", 48.8467139, 2.3463854},
+			Library{xml, "751052105", "PARIS-BIS, Fonds général", 48.8492618, 2.3433311},
+			Library{xml, "751052116", "PARIS-Bib. Sainte Geneviève", 48.8467139, 2.3463854},
 		},
 	}
 	assert.Equal(expected, result)

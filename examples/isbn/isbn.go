@@ -27,12 +27,15 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Erreur lors de la recherche de l'ISBN %s : %v\n", isbn, err)
 		return
 	}
-	fmt.Println("Interrogation d'un seul ISBN : " + isbn + "\n")
+	fmt.Println("Interrogation d'un seul ISBN : " + isbn)
+	fmt.Println()
 	fmt.Println(res_mono)
 
-	fmt.Println("\n=====================================\n")
+	fmt.Println("\n=====================================")
+	fmt.Println()
 
-	fmt.Println("Interrogation de plusieurs ISBN : " + fmt.Sprint(isbns) + "\n")
+	fmt.Println("Interrogation de plusieurs ISBN : " + fmt.Sprint(isbns))
+	fmt.Println()
 	res_multi, err := ac.Isbn2ppn.GetMultiPPNs(isbns, 20)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Erreur lors de la recherche des ISBN %v : %v\n", isbns, err)
