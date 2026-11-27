@@ -106,11 +106,11 @@ go run ./examples/multiLocations
 go run ./examples/checkMSC
 ```
 
-## API documentation
+<!-- ## API documentation -->
 
-Full reference on [pkg.go.dev](https://pkg.go.dev/github.com/frp-2718/abes-client/abes),
-generated from the doc comments; the runnable examples from
-`abes/example_test.go` are displayed there too.
+<!-- Full reference on [pkg.go.dev](https://pkg.go.dev/github.com/frp-2718/abes-client/abes), -->
+<!-- generated from the doc comments; the runnable examples from -->
+<!-- `abes/example_test.go` are displayed there too. -->
 
 ## Development
 
